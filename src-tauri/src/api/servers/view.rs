@@ -4,7 +4,6 @@ use super::core::{
 };
 use log::debug;
 use std::collections::HashMap;
-use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
 pub async fn get_servers(app_handle: tauri::AppHandle) -> Vec<FrontendServer> {

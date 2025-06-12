@@ -1,11 +1,11 @@
 use crate::utils::os::get_home;
-use std::borrow::Cow;
 use crate::APP_STATE_FILENAME;
-use log::{debug, error};
+use log::debug;
 use serde::{Deserialize, Serialize};
+use shell_escape::escape;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use tauri_plugin_store::StoreExt;
-use shell_escape::escape;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BaseServer {
@@ -248,7 +248,11 @@ pub async fn install_server_function(
     let env = env.unwrap_or_else(|| server.command_info.env.clone());
     if input_arg.is_some() {
         input_arg_config.value = input_arg.unwrap();
-        arg_configs = format!("{} {}", arg_configs, escape(Cow::from(input_arg_config.value.join(" "))));
+        arg_configs = format!(
+            "{} {}",
+            arg_configs,
+            escape(Cow::from(input_arg_config.value.join(" ")))
+        );
     }
 
     let mut config = ClientConfig::load();
@@ -338,7 +342,7 @@ pub async fn update_server_function(
     env: Option<HashMap<String, String>>,
     input_arg: Option<Vec<String>>,
 ) -> bool {
-    let mut config = ClientConfig::load();
+    let config = ClientConfig::load();
     if !config.mcp_servers.contains_key(server_id) {
         install_server_function(&app_handle, server_id, env, input_arg).await;
     } else {

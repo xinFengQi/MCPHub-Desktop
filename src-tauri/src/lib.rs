@@ -2,7 +2,6 @@ mod api;
 mod utils;
 
 use tauri_plugin_log::{Target, TargetKind};
-use tauri_plugin_store::StoreExt;
 
 pub const APP_STATE_FILENAME: &str = "AppState.json";
 
