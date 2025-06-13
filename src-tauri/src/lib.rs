@@ -6,6 +6,7 @@ use tauri_plugin_log::{Target, TargetKind};
 pub const APP_STATE_FILENAME: &str = "AppState.json";
 
 use api::dependency::view as dependency_view;
+use api::process::view as process_view;
 use api::servers::view as servers_view;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -35,6 +36,7 @@ pub fn run() {
             dependency_view::check_resource, // 检查json是否加载完成
             dependency_view::install_npm,
             dependency_view::install_uv,
+            process_view::get_process_info_by_word,
             servers_view::get_servers,
             servers_view::get_installed_servers,
             servers_view::install_server,

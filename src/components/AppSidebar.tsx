@@ -37,8 +37,8 @@ const items = [
     icon: Package,
   },
   {
-    title: "端口占用查询",
-    url: "/management",
+    title: "进程管理",
+    url: "/management-pid",
     icon: Package,
   },
   {

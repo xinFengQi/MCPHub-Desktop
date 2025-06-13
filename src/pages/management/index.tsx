@@ -45,7 +45,6 @@ export default function MyServersPage() {
     const checkDingDingIsStart = async () => {
         try {
             const status = await invoke<boolean>("check_dingding_is_start");
-            console.log(status)
             setDingDingInfo(prev => ({
                 ...prev,
                 isStart: status

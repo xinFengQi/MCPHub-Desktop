@@ -31,7 +31,7 @@ export function Layout() {
       <CmdOutputContext.Provider value={cmdLines}>
         <div className="flex h-screen w-full overflow-hidden">
           <AppSidebar />
-          <main className="flex-1 min-w-0 overflow-auto">
+          <main className="flex-1 min-w-0 overflow-hidden h-full flex flex-col">
             <div className="p-4 flex items-center gap-2">
               <SidebarTrigger />
               <Dialog>
@@ -46,7 +46,7 @@ export function Layout() {
                 </DialogContent>
               </Dialog>
             </div>
-            <div className="flex-1 min-w-0 px-6">
+            <div className="flex-1 min-w-0 px-6 pb-4 flex flex-col overflow-hidden">
               <Outlet />
             </div>
           </main>
