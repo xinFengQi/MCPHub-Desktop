@@ -1,9 +1,8 @@
 import { createHashRouter } from "react-router-dom"
 
 import { Layout } from "@/components/Layout"
-import DiscoverPage from "@/pages/discover"
-import MyServersPage from "@/pages/my"
 import WelcomePage from "@/pages/welcome"
+import ManagementPage from "@/pages/management"
 
 export const router = createHashRouter([
   {
@@ -15,12 +14,8 @@ export const router = createHashRouter([
         element: <WelcomePage />
       },
       {
-        path: "discover",
-        element: <DiscoverPage />
-      },
-      {
-        path: "installed",
-        element: <MyServersPage />
+        path: "management",
+        element: <ManagementPage />
       },
     ]
   }

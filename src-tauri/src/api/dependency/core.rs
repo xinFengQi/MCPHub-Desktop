@@ -17,7 +17,6 @@ pub struct NpmHandler;
 pub struct UVHandler;
 
 pub struct ResourceHandler;
-const SERVERS_URL: &str = "https://app.mcphub.net/server-configuration/servers-v0.1.json";
 
 impl NpmHandler {
     pub async fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
@@ -243,7 +242,7 @@ impl ResourceHandler {
     async fn download(app_handle: &tauri::AppHandle) -> Result<()> {
         let store = app_handle.store(APP_STATE_FILENAME)?;
         trace!("Start download servers.json");
-        let servers_json = reqwest::get(SERVERS_URL).await?.text().await?;
+        let servers_json = std::fs::read_to_string("src-tauri/src/resource/servers.json")?;
         trace!("servers.json: {}", servers_json);
         store.set("servers", servers_json);
         trace!("servers.json set in store");

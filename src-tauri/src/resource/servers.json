@@ -1,0 +1,16 @@
+[
+  {
+    "id": "puppeteer",
+    "title": "Puppeteer",
+    "description": "Browser automation and web scraping",
+    "tags": ["browser automation", "web scraping"],
+    "creator": "Official",
+    "logoUrl": "https://app.mcphub.net/server-configuration/image/puppeteer.svg",
+    "publishDate": "2024-12-08T18:00:00Z",
+    "rating": 5,
+    "commandInfo": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+]

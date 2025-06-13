@@ -27,7 +27,12 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             dependency_view::check_dependency,
-            dependency_view::check_resource,
+            dependency_view::check_dingding_dependency,
+            dependency_view::check_dingding_install,
+            dependency_view::check_dingding_is_start,
+            dependency_view::check_dingding_start,
+            dependency_view::check_dingding_stop,
+            dependency_view::check_resource, // 检查json是否加载完成
             dependency_view::install_npm,
             dependency_view::install_uv,
             servers_view::get_servers,
