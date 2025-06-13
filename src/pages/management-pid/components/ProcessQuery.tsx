@@ -38,16 +38,21 @@ const OPTIONS = [
 const getShortCommand = (command: string) => {
     // 移除路径中的引号（如果有）
     const cleanCommand = command.replace(/["']/g, '');
-    // 按空格分割，获取所有部分
-    const parts = cleanCommand.split(' ');
-    // 获取基础命令（第一个部分）的最后一段路径
-    const baseCommand = parts[0].split(/[\/\\]/).pop() || '';
-    // 如果有参数，添加前两个参数，其余用...表示
-    if (parts.length > 1) {
-        const args = parts.slice(1, 3).join(' ');
-        return parts.length > 3 ? `${baseCommand} ${args}...` : `${baseCommand} ${args}`;
-    }
-    return baseCommand;
+
+    // 查找第一个参数标记（以 - 或 -- 开头）的位置
+    const argIndex = cleanCommand.search(/\s-{1,2}[a-zA-Z]/);
+
+    // 分离主命令和参数
+    const mainCommand = argIndex === -1 ? cleanCommand : cleanCommand.slice(0, argIndex);
+    const args = argIndex === -1 ? '' : cleanCommand.slice(argIndex);
+
+    // 获取主命令的最后一段
+    const baseCommand = mainCommand.split(/[\/\\]/).pop() || '';
+
+    // 如果原始命令包含路径分隔符，添加...前缀
+    const prefix = (mainCommand.includes('/') || mainCommand.includes('\\')) ? '...' : '';
+
+    return args ? `${prefix}${baseCommand}${args}` : baseCommand;
 };
 
 export default function ProcessQuery() {
@@ -130,24 +135,24 @@ export default function ProcessQuery() {
                             <TableHeader className="sticky top-0 bg-white z-10">
                                 <TableRow>
                                     <TableHead className="w-24">PID</TableHead>
-                                    <TableHead className="w-32">用户</TableHead>
                                     <TableHead className="w-24">CPU</TableHead>
                                     <TableHead className="w-24">内存</TableHead>
-                                    <TableHead>命令</TableHead>
+                                    <TableHead className="w-[300px]">命令</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {processes.map((process, index) => (
                                     <TableRow key={index}>
                                         <TableCell>{process.pid}</TableCell>
-                                        <TableCell>{process.user}</TableCell>
                                         <TableCell>{process.cpu}%</TableCell>
                                         <TableCell>{process.mem}%</TableCell>
                                         <TableCell>
                                             <TooltipProvider>
                                                 <Tooltip>
-                                                    <TooltipTrigger className="text-left">
-                                                        {getShortCommand(process.command)}
+                                                    <TooltipTrigger asChild>
+                                                        <div className="w-[300px] truncate">
+                                                            {getShortCommand(process.command)}
+                                                        </div>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
                                                         <p className="max-w-[500px] break-all">{process.command}</p>
