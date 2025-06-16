@@ -1,11 +1,4 @@
-import { useState } from "react";
-import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem
-} from "@/components/ui/select";
+import { useEffect, useState } from "react";
 import {
     Table,
     TableBody,
@@ -20,7 +13,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { invoke } from "@tauri-apps/api/core";
+import { History } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { getHistory, setHistory } from "@/utils/history";
+import { ListDisplay } from "@/components/list/ListDisplay";
 
 interface ProcessInfo {
     pid: number;
@@ -30,9 +28,8 @@ interface ProcessInfo {
     command: string;
 }
 
-const OPTIONS = [
-    { label: 'node', value: 'node' },
-];
+const HISTORY_KEY = "process_query_history";
+const MAX_HISTORY = 100;
 
 // 进程状态码转换为中文
 const getProcessStatusText = (status: string): string => {
@@ -91,40 +88,29 @@ const getShortCommand = (command: string) => {
 
 export default function ProcessQuery() {
     const [input, setInput] = useState('');
-    const [options, setOptions] = useState(OPTIONS);
-    const [selected, setSelected] = useState(OPTIONS[0].value);
     const [processes, setProcesses] = useState<ProcessInfo[]>([]);
     const [loading, setLoading] = useState(false);
+    const [history, setHistoryState] = useState<string[]>([]);
 
-    // 输入框变化时，允许自定义输入
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setInput(e.target.value);
-        // 如果输入的内容不在options里，动态添加
-        if (e.target.value && !options.find(opt => opt.value === e.target.value)) {
-            setOptions([...OPTIONS, { label: e.target.value, value: e.target.value }]);
-        }
-    };
+    useEffect(() => {
+        setHistoryState(getHistory(HISTORY_KEY));
+    }, []);
 
-    // 选择下拉选项
-    const handleSelectChange = (value: string) => {
-        setSelected(value);
-        setInput(value);
-    };
-
-    // 查询按钮点击
-    const handleQuery = async () => {
-        const keyword = input || selected;
-        if (!keyword) return;
-
+    const handleQuery = async (keyword?: string) => {
+        const searchWord = (keyword ?? input).trim();
+        if (!searchWord) return;
         setLoading(true);
         try {
             const processInfos = await invoke<ProcessInfo[]>("get_process_info_by_word", {
-                keyword
+                keyword: searchWord
             });
-            console.log(processInfos)
             setProcesses(processInfos);
+            // 写入历史
+            let newHistory = [searchWord, ...history.filter(h => h !== searchWord)];
+            if (newHistory.length > MAX_HISTORY) newHistory = newHistory.slice(0, MAX_HISTORY);
+            setHistory(newHistory, HISTORY_KEY, MAX_HISTORY);
+            setHistoryState(newHistory);
         } catch (error) {
-            console.error('查询进程信息失败:', error);
             setProcesses([]);
         } finally {
             setLoading(false);
@@ -133,33 +119,53 @@ export default function ProcessQuery() {
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
-            {/* 固定的搜索区域 */}
+            {/* 搜索区域 */}
             <div className="shrink-0 flex items-center gap-2 p-4 bg-white border-b">
-                <input
-                    className="border px-2 py-1 rounded w-48"
+                <Input
                     value={input}
-                    onChange={handleInputChange}
+                    onChange={e => setInput(e.target.value)}
                     placeholder="请输入进程名"
+                    onKeyDown={e => { if (e.key === "Enter") handleQuery(); }}
+                    endAdornment={
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button
+                                    className="p-1 hover:bg-gray-100 rounded"
+                                    tabIndex={-1}
+                                    title="历史记录"
+                                    type="button"
+                                >
+                                    <History size={18} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-64 max-h-64 overflow-y-auto">
+                                <div className="text-sm font-bold px-4 py-2 border-b">历史搜索</div>
+                                <ListDisplay
+                                    items={history}
+                                    onSelect={(item: string) => {
+                                        setInput(item);
+                                        handleQuery(item);
+                                    }}
+                                    onDelete={(item: string) => {
+                                        const newHistory = history.filter(h => h !== item);
+                                        setHistory(newHistory, HISTORY_KEY, MAX_HISTORY);
+                                        setHistoryState(newHistory);
+                                    }}
+                                    emptyText="暂无历史"
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    }
+                    className="w-48"
                 />
-                <Select value={selected} onValueChange={handleSelectChange}>
-                    <SelectTrigger className="w-40">
-                        <SelectValue placeholder="选择进程" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {options.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
                 <button
                     className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                    onClick={handleQuery}
+                    onClick={() => handleQuery()}
                     disabled={loading}
                 >
                     {loading ? '查询中...' : '查询'}
                 </button>
             </div>
-
             {/* 表格区域 */}
             <div className="flex-1 overflow-auto">
                 {processes.length === 0 ? (
