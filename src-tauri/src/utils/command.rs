@@ -1,5 +1,4 @@
 use crate::utils::pid_manager::PidManager;
-use serde::Serialize;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::thread;

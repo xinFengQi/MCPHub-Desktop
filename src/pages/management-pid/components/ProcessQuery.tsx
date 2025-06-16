@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { getHistory, setHistory } from "@/utils/history";
 import { ListDisplay } from "@/components/list/ListDisplay";
 
+let lastSearchKeyword: string | null = null;
+
 interface ProcessInfo {
     pid: number;
     status: string;
@@ -94,6 +96,11 @@ export default function ProcessQuery() {
 
     useEffect(() => {
         setHistoryState(getHistory(HISTORY_KEY));
+        // 如果有上次的搜索关键词，自动触发查询
+        if (lastSearchKeyword) {
+            setInput(lastSearchKeyword);
+            handleQuery(lastSearchKeyword);
+        }
     }, []);
 
     const handleQuery = async (keyword?: string) => {
@@ -105,6 +112,8 @@ export default function ProcessQuery() {
                 keyword: searchWord
             });
             setProcesses(processInfos);
+            // 保存本次搜索关键词
+            lastSearchKeyword = searchWord;
             // 写入历史
             let newHistory = [searchWord, ...history.filter(h => h !== searchWord)];
             if (newHistory.length > MAX_HISTORY) newHistory = newHistory.slice(0, MAX_HISTORY);

@@ -4,6 +4,7 @@ import { check } from '@tauri-apps/plugin-updater';
 import React from "react";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./routes";
+import { Toaster } from "@/components/ui/toast/toaster";
 
 function useAutoUpdater() {
   React.useEffect(() => {
@@ -36,5 +37,10 @@ function useAutoUpdater() {
 
 export default function App() {
   useAutoUpdater();
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }

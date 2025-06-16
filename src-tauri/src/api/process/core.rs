@@ -12,6 +12,16 @@ pub struct ProcessInfo {
     pub command: String,
 }
 
+#[derive(Serialize)]
+pub struct PortInfo {
+    pub port: u16,
+    pub pid: u32,
+    pub process: String,
+    pub protocol: String,
+    pub local_addr: String,
+    pub status: String,
+}
+
 pub struct ProcessHandler;
 
 impl ProcessHandler {
@@ -29,8 +39,9 @@ impl ProcessHandler {
             .filter_map(|line| {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 11 {
+                    let pid = parts[1].parse().unwrap_or(0);
                     Some(ProcessInfo {
-                        pid: parts[1].parse().unwrap_or(0),
+                        pid,
                         status: parts[7].to_string(), // STAT列
                         cpu: parts[2].to_string(),
                         mem: parts[3].to_string(),
@@ -113,5 +124,119 @@ impl ProcessHandler {
             .collect();
 
         Ok(processes)
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn get_port_info_by_word(
+        app_handle: &AppHandle,
+        keyword: &str,
+    ) -> Result<Vec<PortInfo>, String> {
+        let output = run_command(&app_handle, "cmd_output", "lsof", &["-i", "-P", "-n"])
+            .map_err(|e| e.to_string())?;
+        let mut result = vec![];
+        for line in output.lines().skip(1) {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            if cols.len() < 9 {
+                continue;
+            }
+            let process = cols[0].to_string();
+            let pid = cols[1].parse::<u32>().unwrap_or(0);
+            let protocol = cols[7].to_string();
+            let local_addr = cols[8].to_string();
+            let status = if cols.len() > 9 {
+                cols[9].to_string()
+            } else {
+                "".to_string()
+            };
+            let port = local_addr
+                .split(':')
+                .last()
+                .and_then(|p| p.parse::<u16>().ok())
+                .unwrap_or(0);
+            if keyword.is_empty() || port.to_string() == keyword {
+                result.push(PortInfo {
+                    port,
+                    pid,
+                    process,
+                    protocol,
+                    local_addr,
+                    status,
+                });
+            }
+        }
+        Ok(result)
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn get_port_info_by_word(
+        app_handle: &AppHandle,
+        keyword: &str,
+    ) -> Result<Vec<PortInfo>, String> {
+        let output = run_command(&app_handle, "cmd_output", "netstat", &["-ano"])
+            .map_err(|e| e.to_string())?;
+        // 收集所有pid
+        let mut pid_set = std::collections::HashSet::new();
+        let mut netstat_lines = vec![];
+        for line in output.lines().skip(4) {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            if cols.len() < 5 {
+                continue;
+            }
+            let pid = cols.last().unwrap_or(&"0").parse::<u32>().unwrap_or(0);
+            pid_set.insert(pid);
+            netstat_lines.push(line.to_string());
+        }
+        // 查询所有pid对应进程名
+        let mut pid2name = std::collections::HashMap::new();
+        if !pid_set.is_empty() {
+            let tasklist_out = run_command(
+                &app_handle,
+                "cmd_output",
+                "tasklist",
+                &["/FO", "CSV", "/NH"],
+            )
+            .map_err(|e| e.to_string())?;
+            for line in tasklist_out.lines() {
+                let parts: Vec<&str> = line.split(',').map(|s| s.trim_matches('"')).collect();
+                if parts.len() >= 2 {
+                    if let Ok(pid) = parts[1].parse::<u32>() {
+                        pid2name.insert(pid, parts[0].to_string());
+                    }
+                }
+            }
+        }
+        // 重新解析netstat，填充PortInfo
+        let mut result = vec![];
+        for line in netstat_lines {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            if cols.len() < 5 {
+                continue;
+            }
+            let protocol = cols[0].to_string();
+            let local_addr = cols[1].to_string();
+            let status = if protocol.to_lowercase().starts_with("tcp") {
+                cols[3].to_string()
+            } else {
+                "".to_string()
+            };
+            let pid = cols.last().unwrap_or(&"0").parse::<u32>().unwrap_or(0);
+            let port = local_addr
+                .split(':')
+                .last()
+                .and_then(|p| p.parse::<u16>().ok())
+                .unwrap_or(0);
+            let process = pid2name.get(&pid).cloned().unwrap_or_default();
+            if keyword.is_empty() || port.to_string() == keyword {
+                result.push(PortInfo {
+                    port,
+                    pid,
+                    process,
+                    protocol,
+                    local_addr,
+                    status,
+                });
+            }
+        }
+        Ok(result)
     }
 }
