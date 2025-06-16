@@ -24,7 +24,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 interface ProcessInfo {
     pid: number;
-    user: string;
+    status: string;
     cpu: string;
     mem: string;
     command: string;
@@ -33,6 +33,40 @@ interface ProcessInfo {
 const OPTIONS = [
     { label: 'node', value: 'node' },
 ];
+
+// 进程状态码转换为中文
+const getProcessStatusText = (status: string): string => {
+    // macOS状态码转换
+    const macStatusMap: { [key: string]: string } = {
+        'R': '运行中',
+        'S': '休眠中',
+        'I': '空闲',
+        'Z': '僵尸进程',
+        'T': '已停止',
+        'U': '等待中',
+        'D': '不可中断',
+    };
+
+    // Windows状态转换
+    const winStatusMap: { [key: string]: string } = {
+        'Running': '运行中',
+        'Suspended': '已暂停',
+        'Not Responding': '无响应',
+        'Unknown': '未知',
+    };
+
+    // 处理macOS的组合状态码（如'Ss'、'R+'等）
+    const baseStatus = status.charAt(0);
+    const macStatus = macStatusMap[baseStatus];
+    if (macStatus) return macStatus;
+
+    // 处理Windows状态
+    const winStatus = winStatusMap[status];
+    if (winStatus) return winStatus;
+
+    // 未知状态则返回原始值
+    return status;
+};
 
 // 获取命令的最后一部分
 const getShortCommand = (command: string) => {
@@ -87,6 +121,7 @@ export default function ProcessQuery() {
             const processInfos = await invoke<ProcessInfo[]>("get_process_info_by_word", {
                 keyword
             });
+            console.log(processInfos)
             setProcesses(processInfos);
         } catch (error) {
             console.error('查询进程信息失败:', error);
@@ -135,6 +170,7 @@ export default function ProcessQuery() {
                             <TableHeader className="sticky top-0 bg-white z-10">
                                 <TableRow>
                                     <TableHead className="w-24">PID</TableHead>
+                                    <TableHead className="w-24">状态</TableHead>
                                     <TableHead className="w-24">CPU</TableHead>
                                     <TableHead className="w-24">内存</TableHead>
                                     <TableHead className="w-[300px]">命令</TableHead>
@@ -144,6 +180,7 @@ export default function ProcessQuery() {
                                 {processes.map((process, index) => (
                                     <TableRow key={index}>
                                         <TableCell>{process.pid}</TableCell>
+                                        <TableCell>{getProcessStatusText(process.status)}</TableCell>
                                         <TableCell>{process.cpu}%</TableCell>
                                         <TableCell>{process.mem}%</TableCell>
                                         <TableCell>
