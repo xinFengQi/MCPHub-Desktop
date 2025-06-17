@@ -239,4 +239,16 @@ impl ProcessHandler {
         }
         Ok(result)
     }
+
+    #[cfg(target_os = "macos")]
+    pub fn kill_process(app_handle: &AppHandle, pid: &str) -> Result<bool> {
+        run_command(app_handle, "cmd_output", "kill", &["-9", pid])?;
+        Ok(true)
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn kill_process(app_handle: &AppHandle, pid: &str) -> Result<bool> {
+        run_command(app_handle, "cmd_output", "taskkill", &["/F", "/PID", pid])?;
+        Ok(true)
+    }
 }

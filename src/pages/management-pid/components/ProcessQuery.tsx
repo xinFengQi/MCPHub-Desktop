@@ -19,6 +19,8 @@ import { History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getHistory, setHistory } from "@/utils/history";
 import { ListDisplay } from "@/components/list/ListDisplay";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 
 let lastSearchKeyword: string | null = null;
 
@@ -88,11 +90,35 @@ const getShortCommand = (command: string) => {
     return args ? `${prefix}${baseCommand}${args}` : baseCommand;
 };
 
+// 工具函数：处理历史
+function updateHistory(newItem: string, history: string[], key: string, max: number) {
+    let newHistory = [newItem, ...history.filter(h => h !== newItem)];
+    if (newHistory.length > max) newHistory = newHistory.slice(0, max);
+    setHistory(newHistory, key, max);
+    return newHistory;
+}
+
+// 工具函数：弹窗状态管理
+function useConfirmDialogState() {
+    const [open, setOpen] = useState(false);
+    const [pendingId, setPendingId] = useState<number | null>(null);
+    const openDialog = (id: number) => {
+        setPendingId(id);
+        setOpen(true);
+    };
+    const closeDialog = () => {
+        setOpen(false);
+        setPendingId(null);
+    };
+    return { open, pendingId, openDialog, closeDialog };
+}
+
 export default function ProcessQuery() {
     const [input, setInput] = useState('');
     const [processes, setProcesses] = useState<ProcessInfo[]>([]);
     const [loading, setLoading] = useState(false);
     const [history, setHistoryState] = useState<string[]>([]);
+    const { open, pendingId, openDialog, closeDialog } = useConfirmDialogState();
 
     useEffect(() => {
         setHistoryState(getHistory(HISTORY_KEY));
@@ -114,15 +140,21 @@ export default function ProcessQuery() {
             setProcesses(processInfos);
             // 保存本次搜索关键词
             lastSearchKeyword = searchWord;
-            // 写入历史
-            let newHistory = [searchWord, ...history.filter(h => h !== searchWord)];
-            if (newHistory.length > MAX_HISTORY) newHistory = newHistory.slice(0, MAX_HISTORY);
-            setHistory(newHistory, HISTORY_KEY, MAX_HISTORY);
+            const newHistory = updateHistory(searchWord, history, HISTORY_KEY, MAX_HISTORY);
             setHistoryState(newHistory);
         } catch (error) {
             setProcesses([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleKillProcess = async (pid: number) => {
+        try {
+            await invoke("kill_process", { pid: pid.toString() });
+            handleQuery();
+        } catch (error) {
+            console.error("Failed to kill process:", error);
         }
     };
 
@@ -189,6 +221,7 @@ export default function ProcessQuery() {
                                     <TableHead className="w-24">CPU</TableHead>
                                     <TableHead className="w-24">内存</TableHead>
                                     <TableHead className="w-[300px]">命令</TableHead>
+                                    <TableHead className="w-24">操作</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -211,6 +244,34 @@ export default function ProcessQuery() {
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
+                                        </TableCell>
+                                        <TableCell>
+                                            <ConfirmDialog
+                                                trigger={
+                                                    <Button
+                                                        className="px-0"
+                                                        variant="link"
+                                                        size="sm"
+                                                        onClick={() => openDialog(process.pid)}
+                                                    >
+                                                        关闭进程
+                                                    </Button>
+                                                }
+                                                title="确定要关闭该进程吗？"
+                                                description={`PID: ${process.pid}；\n 命令: ${process.command};`}
+                                                onConfirm={async () => {
+                                                    if (pendingId !== null) {
+                                                        await handleKillProcess(pendingId);
+                                                        closeDialog();
+                                                    }
+                                                }}
+                                                confirmText="确认"
+                                                cancelText="取消"
+                                                open={open && pendingId === process.pid}
+                                                onOpenChange={o => {
+                                                    if (!o) closeDialog();
+                                                }}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))}

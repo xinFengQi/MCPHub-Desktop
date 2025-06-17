@@ -38,6 +38,7 @@ pub fn run() {
             dependency_view::install_uv,
             process_view::get_process_info_by_word,
             process_view::get_port_info_by_word,
+            process_view::kill_process,
             servers_view::get_servers,
             servers_view::get_installed_servers,
             servers_view::install_server,

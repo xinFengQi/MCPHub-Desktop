@@ -5,6 +5,18 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useToast } from "@/hooks/use-toast";
+import {
+    AlertDialog,
+    AlertDialogTrigger,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogFooter,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogAction,
+    AlertDialogCancel,
+} from "@/components/ui/toast/alert-dialog";
+import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 
 // 创建全局 context
 export const useCmdOutput = () => {
@@ -131,12 +143,6 @@ function CmdOutputViewer({ lines, onClear }: CmdOutputViewerProps) {
         });
     };
 
-    const handleClear = () => {
-        if (window.confirm('确定要清除所有日志吗？')) {
-            onClear();
-        }
-    };
-
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
     };
@@ -203,8 +209,15 @@ function CmdOutputViewer({ lines, onClear }: CmdOutputViewerProps) {
                 <Button variant="ghost" size="icon" onClick={handleCopy} title="复制全部">
                     <Copy className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleClear} title="清除全部">
-                    <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" title="清除全部">
+                    <ConfirmDialog
+                        trigger={<span><Trash2 className="h-4 w-4 cursor-pointer" /></span>}
+                        title="清除所有日志？"
+                        description="此操作不可撤销，确定要清除所有日志吗？"
+                        onConfirm={onClear}
+                        confirmText="确定"
+                        cancelText="取消"
+                    />
                 </Button>
             </div>
             <div
